@@ -104,7 +104,7 @@ Do not relabel ordinary Codex or worker-agent output as Fable speech.
 Pass the packet as standard input:
 
 ```bash
-printf '%s' "$PACKET" | /Users/arnavdas/.codex/skills/fable/scripts/ask_fable.sh
+printf '%s' "$PACKET" | ~/.codex/skills/fable/scripts/ask_fable.sh
 ```
 
 Do not place secrets in the packet. The helper uses the existing local Claude

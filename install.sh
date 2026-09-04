@@ -47,6 +47,10 @@ if [[ -z "$target_root" ]]; then
 fi
 [[ -n "$target_root" ]] || { echo 'The target directory cannot be empty.' >&2; exit 64; }
 [[ "$target_root" != '/' ]] || { echo 'Refusing to install directly under /. Use a skills directory.' >&2; exit 64; }
+if [[ -e "$target_root" && ! -d "$target_root" ]]; then
+  echo "Target exists and is not a directory: $target_root" >&2
+  exit 73
+fi
 
 repo_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 source_root="$repo_root/skill/fable"

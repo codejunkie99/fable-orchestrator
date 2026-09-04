@@ -24,6 +24,12 @@ tests/test_skill.sh
 
 The three files under `skill/fable/` are the installable skill. `ask_fable.sh` is executable and invokes Claude Code's local `fable` alias with no session persistence. The packet passed to it must contain decisions and workspace facts only; never put credentials in a packet.
 
+## Prerequisites
+
+- `bash` and the Claude Code CLI (`claude` on PATH, locally authenticated) for `ask_fable.sh`.
+- `jq` is optional: with it, `ask_fable.sh` derives model candidates from your Claude settings and usage cache; without it, the helper falls back to Claude Code's configured default model.
+- `rg` (ripgrep) is required only for `tests/test_skill.sh`.
+
 ## Install
 
 From this repository:
@@ -38,6 +44,8 @@ From this repository:
 ```bash
 ./install.sh --copy --target "$PWD/.local/codex/skills"
 ```
+
+`FABLE_SKILLS_DIR` sets the same default when `--target` is not passed. At runtime, `FABLE_MODEL`, `FABLE_MODEL_CANDIDATES`, and `FABLE_EFFORT` override the helper's model discovery and effort level.
 
 The installer reads only this repository and the destination path. It never reads, creates, or modifies credentials. Start a new Codex task after changing the provider or agent definitions.
 
