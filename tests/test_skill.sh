@@ -70,7 +70,6 @@ source_candidates=()
 if [[ -n "${FABLE_SOURCE_DIR:-}" ]]; then
   source_candidates+=("$FABLE_SOURCE_DIR")
 fi
-source_candidates+=("/Users/arnavdas/.codex/skills/fable")
 for installed_source in "${source_candidates[@]}"; do
   [[ -d "$installed_source" ]] || continue
   for relative_path in SKILL.md scripts/ask_fable.sh agents/openai.yaml; do
