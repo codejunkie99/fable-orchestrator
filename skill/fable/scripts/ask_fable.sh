@@ -44,15 +44,31 @@ else
   ((${#model_candidates[@]})) || model_candidates=("")
 fi
 
+# Drop duplicate candidates (settings.json and stats-cache.json often overlap).
+# Keep first-seen order; no associative arrays (bash 3.2 compatibility).
+if ((${#model_candidates[@]} > 1)); then
+  unique_candidates=()
+  for candidate in "${model_candidates[@]}"; do
+    already_seen=0
+    for kept in ${unique_candidates[@]+"${unique_candidates[@]}"}; do
+      [[ "$kept" == "$candidate" ]] && { already_seen=1; break; }
+    done
+    ((already_seen)) || unique_candidates+=("$candidate")
+  done
+  model_candidates=(${unique_candidates[@]+"${unique_candidates[@]}"})
+fi
+
 response=""
 selected_model=""
 for model in "${model_candidates[@]}"; do
   model_args=()
   [[ -n "$model" ]] && model_args=(--model "$model")
+  # bash < 4.4 (e.g. macOS system bash 3.2) treats "${arr[@]}" on an empty
+  # array as an unbound variable under set -u; the + guard expands to nothing.
   set +e
   candidate_response="$(claude \
     --print \
-    "${model_args[@]}" \
+    "${model_args[@]+"${model_args[@]}"}" \
     --effort "$fable_effort" \
     --permission-mode dontAsk \
     --tools "" \
