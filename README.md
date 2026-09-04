@@ -45,7 +45,7 @@ From this repository:
 ./install.sh --copy --target "$PWD/.local/codex/skills"
 ```
 
-`FABLE_SKILLS_DIR` sets the same default when `--target` is not passed. At runtime, `FABLE_MODEL`, `FABLE_MODEL_CANDIDATES`, and `FABLE_EFFORT` override the helper's model discovery and effort level.
+`FABLE_SKILLS_DIR` sets the same default when `--target` is not passed. At runtime, `FABLE_MODEL`, `FABLE_MODEL_CANDIDATES`, and `FABLE_EFFORT` override the helper's model discovery and effort level, and `FABLE_CLAUDE_BIN` selects the Claude CLI binary when it is not named `claude` on PATH.
 
 The installer reads only this repository and the destination path. It never reads, creates, or modifies credentials. Start a new Codex task after changing the provider or agent definitions.
 

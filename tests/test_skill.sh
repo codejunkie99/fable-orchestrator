@@ -136,6 +136,13 @@ if command -v jq >/dev/null 2>&1; then
   [[ "$(rg -c -- '--model dup-model' "$mock_log")" == '1' ]] || fail 'duplicate model candidates were not deduplicated'
 fi
 
+# FABLE_CLAUDE_BIN: an absolute-path binary outside PATH must be honored.
+: > "$mock_log"
+bin_output="$(env PATH="/usr/bin:/bin" FABLE_CLAUDE_BIN="$mock_bin/claude" \
+  MOCK_CALL_LOG="$mock_log" FABLE_MODEL=mock-via-bin \
+  "$skill_root/scripts/ask_fable.sh" <<< 'packet')" || fail 'ask_fable.sh ignored FABLE_CLAUDE_BIN'
+rg -Fq 'Fable 5.1 speaks (mock-via-bin)' <<<"$bin_output" || fail 'FABLE_CLAUDE_BIN invocation did not succeed'
+
 # Keep the scan practical: this test file contains the detection patterns, so exclude it.
 if rg -n --hidden --glob '!.git/**' --glob '!tests/test_skill.sh' \
   -e '-----BEGIN [A-Z ]*PRIVATE KEY-----' \

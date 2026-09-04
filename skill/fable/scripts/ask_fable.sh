@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if ! command -v claude >/dev/null 2>&1; then
-  echo "Claude Code CLI is not available on PATH." >&2
+# The Claude CLI may be installed under another name (e.g. claude-code) or
+# outside PATH; FABLE_CLAUDE_BIN overrides the binary to invoke.
+claude_bin="${FABLE_CLAUDE_BIN:-claude}"
+
+if ! command -v "$claude_bin" >/dev/null 2>&1; then
+  echo "Claude Code CLI '$claude_bin' is not available on PATH (set FABLE_CLAUDE_BIN to override)." >&2
   exit 127
 fi
 
@@ -66,7 +70,7 @@ for model in "${model_candidates[@]}"; do
   # bash < 4.4 (e.g. macOS system bash 3.2) treats "${arr[@]}" on an empty
   # array as an unbound variable under set -u; the + guard expands to nothing.
   set +e
-  candidate_response="$(claude \
+  candidate_response="$("$claude_bin" \
     --print \
     "${model_args[@]+"${model_args[@]}"}" \
     --effort "$fable_effort" \
