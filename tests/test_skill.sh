@@ -70,7 +70,7 @@ source_candidates=()
 if [[ -n "${FABLE_SOURCE_DIR:-}" ]]; then
   source_candidates+=("$FABLE_SOURCE_DIR")
 fi
-source_candidates+=("/Users/arnavdas/.codex/skills/fable")
+source_candidates+=("$HOME/.codex/skills/fable")
 for installed_source in "${source_candidates[@]}"; do
   [[ -d "$installed_source" ]] || continue
   for relative_path in SKILL.md scripts/ask_fable.sh agents/openai.yaml; do
@@ -78,6 +78,63 @@ for installed_source in "${source_candidates[@]}"; do
   done
   break
 done
+
+# Behavioral checks for ask_fable.sh via a mock claude CLI: no live Claude login needed.
+mock_bin="$temp_root/mock-bin"
+mkdir -p "$mock_bin"
+cat >"$mock_bin/claude" <<'MOCK'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$MOCK_CALL_LOG"
+if [[ -n "${MOCK_OK_MODEL:-}" ]]; then
+  case " $* " in
+    *" --model $MOCK_OK_MODEL "*) echo 'mock graph'; exit 0 ;;
+  esac
+  echo 'model unavailable' >&2
+  exit 1
+fi
+echo 'mock graph'
+exit 0
+MOCK
+chmod 0755 "$mock_bin/claude"
+mock_log="$temp_root/mock-calls.log"
+
+# Default path: no model candidates anywhere must call claude without --model.
+# Regression: bash < 4.4 aborts on "${arr[@]}" for an empty array under set -u.
+: > "$mock_log"
+empty_cfg="$temp_root/empty-claude-cfg"
+mkdir -p "$empty_cfg"
+default_output="$(env -u MOCK_OK_MODEL PATH="$mock_bin:$PATH" CLAUDE_CONFIG_DIR="$empty_cfg" \
+  MOCK_CALL_LOG="$mock_log" FABLE_MODEL= FABLE_MODEL_CANDIDATES= \
+  "$skill_root/scripts/ask_fable.sh" <<< 'packet')" || fail 'ask_fable.sh default model path failed'
+rg -Fq 'Fable 5.1 speaks (default)' <<<"$default_output" || fail 'default path did not report the default model'
+if rg -Fq -- '--model' "$mock_log"; then
+  fail 'default path passed an explicit --model flag'
+fi
+
+# Fallback: a failing first candidate must not prevent a later one from succeeding.
+: > "$mock_log"
+fallback_output="$(env PATH="$mock_bin:$PATH" MOCK_CALL_LOG="$mock_log" MOCK_OK_MODEL=mock-b \
+  FABLE_MODEL= FABLE_MODEL_CANDIDATES='mock-a mock-b' \
+  "$skill_root/scripts/ask_fable.sh" <<< 'packet')" || fail 'ask_fable.sh candidate fallback failed'
+rg -Fq 'Fable 5.1 speaks (mock-b)' <<<"$fallback_output" || fail 'fallback did not select the working candidate'
+
+# Discovery: the same model in settings.json and stats-cache.json must be tried once.
+# Every candidate fails here so the loop walks the whole list; exit 69 is expected.
+if command -v jq >/dev/null 2>&1; then
+  dup_cfg="$temp_root/dup-claude-cfg"
+  mkdir -p "$dup_cfg"
+  printf '{"model":"dup-model"}\n' > "$dup_cfg/settings.json"
+  printf '{"modelUsage":{"dup-model":{}}}\n' > "$dup_cfg/stats-cache.json"
+  : > "$mock_log"
+  set +e
+  env PATH="$mock_bin:$PATH" CLAUDE_CONFIG_DIR="$dup_cfg" MOCK_CALL_LOG="$mock_log" \
+    MOCK_OK_MODEL=never-available FABLE_MODEL= FABLE_MODEL_CANDIDATES= \
+    "$skill_root/scripts/ask_fable.sh" <<< 'packet' >/dev/null 2>&1
+  dup_status=$?
+  set -e
+  [[ "$dup_status" == 69 ]] || fail "all-failing discovery should exit 69, got $dup_status"
+  [[ "$(rg -c -- '--model dup-model' "$mock_log")" == '1' ]] || fail 'duplicate model candidates were not deduplicated'
+fi
 
 # Keep the scan practical: this test file contains the detection patterns, so exclude it.
 if rg -n --hidden --glob '!.git/**' --glob '!tests/test_skill.sh' \
