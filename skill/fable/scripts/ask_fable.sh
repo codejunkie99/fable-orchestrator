@@ -27,7 +27,10 @@ if [[ -n "${FABLE_MODEL:-}" ]]; then
 elif [[ -n "${FABLE_MODEL_CANDIDATES:-}" ]]; then
   read -r -a model_candidates <<<"$FABLE_MODEL_CANDIDATES"
 else
-  model_candidates=()
+  # This skill exists to route to Fable, so try the local Fable aliases first.
+  # Whatever the discovery below finds is a fallback, never the default: the
+  # configured default model of the user is not Fable and must not answer as Fable.
+  model_candidates=(fable claude-fable-5-1)
   # Claude Code does not expose a portable model-list command. Derive model IDs
   # from the user's own settings and usage cache instead of shipping a catalog.
   if command -v jq >/dev/null 2>&1; then
@@ -74,4 +77,9 @@ if [[ -z "$selected_model" ]]; then
   exit 69
 fi
 
-printf 'Fable 5.1 speaks (%s):\n\n%s\n' "$selected_model" "$response"
+if [[ "$selected_model" == *fable* ]]; then
+  printf 'Fable 5.1 speaks (%s):\n\n%s\n' "$selected_model" "$response"
+else
+  echo "No Fable model was callable; ${selected_model} answered instead." >&2
+  printf 'Orchestration answer from %s, NOT Fable 5.1:\n\n%s\n' "$selected_model" "$response"
+fi
