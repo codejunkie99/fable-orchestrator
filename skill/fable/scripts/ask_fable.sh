@@ -59,6 +59,7 @@ for model in "${model_candidates[@]}"; do
     --effort "$fable_effort" \
     --permission-mode dontAsk \
     --tools "" \
+    --strict-mcp-config \
     --no-session-persistence \
     --output-format text \
     --system-prompt "$system_prompt" \
